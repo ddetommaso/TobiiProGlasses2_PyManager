@@ -17,6 +17,7 @@ import livedata
 import json
 import os
 import codecs
+import csv
 
 class TobiiProperty(object):
 
@@ -27,7 +28,7 @@ class TobiiProperty(object):
     def asValue(self, value):
         return self.py_type(value)
 
-class TobiiSample:
+class TobiiFields:
 
     Recording_timestamp = TobiiProperty('Recording timestamp', int)
     Event = TobiiProperty('Event', str)
@@ -47,22 +48,24 @@ class TobiiSample:
     Gaze_direction_right_z = TobiiProperty('Gaze direction right Z', float)
 
     """
-    3. to define other tobii properties
+    3. to define other CSV tobii properties
     """
 
+class TobiiSample:
+
     def __init__(self, tobii_data):
-        self.__values__ = {}
+        self.__sample__ = {}
 
-        self[self.Recording_timestamp.label] = tobii_data.ts
+        self.__sample__[TobiiFields.Recording_timestamp.label] = tobii_data.ts.getValue()
 
-        if type(tobii_data) is livedata.GazePosition3d:
-            self[self.Gaze3d_position_combined_x.label] = tobii_data.gp3.value()[0]
-            self[self.Gaze3d_position_combined_y.label] = tobii_data.gp3.value()[1]
-            self[self.Gaze3d_position_combined_z.label] = tobii_data.gp3.value()[2]
+        if isinstance(tobii_data, livedata.GazePosition3d):
+            self.__sample__[TobiiFields.Gaze3d_position_combined_x.label] = tobii_data.gp3.getValue()[0]
+            self.__sample__[TobiiFields.Gaze3d_position_combined_y.label] = tobii_data.gp3.getValue()[1]
+            self.__sample__[TobiiFields.Gaze3d_position_combined_z.label] = tobii_data.gp3.getValue()[2]
 
-        elif type(tobii_data) is livedata.GazePosition:
-            self[self.Gaze_position_x.label] = tobii_data.gp.value()[0]
-            self[self.Gaze_position_y.label] = tobii_data.gp.value()[1]
+        elif isinstance(tobii_data, livedata.GazePosition):
+            self.__sample__[TobiiFields.Gaze_position_x.label] = tobii_data.gp.getValue()[0]
+            self.__sample__[TobiiFields.Gaze_position_y.label] = tobii_data.gp.getValue()[1]
 
 
         """
@@ -70,10 +73,13 @@ class TobiiSample:
         """
 
     def __getitem__(self, key):
-        return self.__values__[key]
+        return self.__sample__[key]
 
     def __setitem__(self, key, value):
-        self.__values__[key] = value
+        self.__sample__[key] = value
+
+    def getSample(self):
+        return self.__sample__
 
 
 
@@ -86,8 +92,8 @@ class TobiiRecording:
     def importFromJSONFile(filepath, filename):
         self.__livedatajson__.importFromJSONFile(filepath, filename)
 
-    def addRecordingSample(self, tobii_data):
-        self.__samples__.append(TobiiSample(tobii_data))
+    def addRecordingSample(self, tobii_sample):
+        self.__samples__.append(TobiiSample(tobii_sample))
 
     def getLivedataJSON(self):
         return self.__livedatajson__.getData()
@@ -96,10 +102,21 @@ class TobiiRecording:
         with open(os.path.join(filepath, filename)) as f:
             for line in f:
                 sample = self.__livedatajson__.addJSONLine(line)
-                print(sample)
-                self.addRecordingSample(sample)
+                if sample is not None:
+                    self.addRecordingSample(sample)
 
-
-
-data = TobiiRecording()
-data.importFromJSONFile('.', 'livedata.json')
+    def exportCSVFile(self, filepath, filename):
+        with open(os.path.join(filepath, filename), 'w') as csvfile:
+            fieldnames = [TobiiFields.Recording_timestamp.label,
+                          TobiiFields.Event.label,
+                          TobiiFields.Eye_movement_type.label,
+                          TobiiFields.Gaze_event_duration.label,
+                          TobiiFields.Gaze_position_x.label,
+                          TobiiFields.Gaze_position_y.label,
+                          TobiiFields.Gaze3d_position_combined_x.label,
+                          TobiiFields.Gaze3d_position_combined_y.label,
+                          TobiiFields.Gaze3d_position_combined_z.label]
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            for line in self.__samples__:
+                writer.writerow(line.getSample())

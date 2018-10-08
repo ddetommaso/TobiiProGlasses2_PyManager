@@ -53,19 +53,21 @@ class TobiiJSONProperties:
     APISynch_TAG = TobiiJSONProperty("tag", str)
 
 
-
-
 class TobiiJSONAttribute:
 
     def __init__(self, tobii_property, json_sample):
         self.__tobii_property__ = tobii_property
         self.__value__ = self.__tobii_property__.asValue(json_sample[self.__tobii_property__.key])
 
-    def value(self):
+    def getValue(self):
         return self.__value__
 
-    def key(self):
+    def getKey(self):
         return self.__tobii_property__.key
+
+    def getType(self):
+        return self.__tobii_property__.py_type
+
 
 
 class PupilCenter:
@@ -126,22 +128,22 @@ class LivedataJson:
     def __init__(self):
         self.__livedata__ = []
 
-    def decode(self, dct):
+    def decode(self, json_line):
 
-        if TobiiJSONProperties.PupilCenter.key in dct:
-            return PupilCenter(dct)
+        if TobiiJSONProperties.PupilCenter.key in json_line:
+            return PupilCenter(json_line)
 
-        elif TobiiJSONProperties.PupilDiameter.key in dct:
-            return PupilDiameter(dct)
+        elif TobiiJSONProperties.PupilDiameter.key in json_line:
+            return PupilDiameter(json_line)
 
-        elif TobiiJSONProperties.GazeDirection.key in dct:
-            return GazeDirection(dct)
+        elif TobiiJSONProperties.GazeDirection.key in json_line:
+            return GazeDirection(json_line)
 
-        elif TobiiJSONProperties.GazePosition.key in dct:
-            return GazePosition(dct)
+        elif TobiiJSONProperties.GazePosition.key in json_line:
+            return GazePosition(json_line)
 
-        elif TobiiJSONProperties.GazePosition3d.key in dct:
-            return GazePosition3d(dct)
+        elif TobiiJSONProperties.GazePosition3d.key in json_line:
+            return GazePosition3d(json_line)
 
             """
             2. to add other conditions
@@ -152,6 +154,9 @@ class LivedataJson:
 
     def getData(self):
         return self.__livedata__
+
+    def getTobiiJSONPropertyFromJSON(self, json_line):
+        return self.decode(json_line)
 
     def addJSONLine(self, json_line):
         sample = json.loads(json_line, object_hook=self.decode)
