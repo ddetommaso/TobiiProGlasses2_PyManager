@@ -80,8 +80,6 @@ class PupilCenter:
         self.pc = TobiiJSONAttribute(TobiiJSONProperties.PupilCenter, json_sample)
         self.eye = TobiiJSONAttribute(TobiiJSONProperties.Eye, json_sample)
 
-
-
 class PupilDiameter:
 
     def __init__(self, json_sample):
@@ -161,4 +159,3 @@ class LivedataJson:
     def addJSONLine(self, json_line):
         sample = json.loads(json_line, object_hook=self.decode)
         self.__livedata__.append(sample)
-        return sample
